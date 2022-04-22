@@ -215,109 +215,61 @@ def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
     return None
 
 
-def RecAirVAV(α=1, β=0.1,
-              θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-              Qsa=0, Qla=0, mi=2.18, UA=935.83):
-    """
-    Created on Fri Apr 10 13:57:22 2020
-    Heating & Adiabatic humidification & Re-heating
-    Recirculated air
-    VAV Variable Air Volume:
-        mass flow rate calculated to have const. supply temp.
+def ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA):
 
-    INPUTS:
-        α   mixing ratio of outdoor air, -
-        β    by-pass factor of the adiabatic humidifier, -
-        θS      supply air, °C
-        θIsp    indoor air setpoint, °C
-        φIsp  indoor relative humidity set point, -
-        θO      outdoor temperature for design, °C
-        φO    outdoor relative humidity for design, -
-        Qsa     aux. sensible heat, W
-        Qla     aux. latente heat, W
-        mi      infiltration massflow rate, kg/s
-        UA      global conductivity bldg, W/K
+    w1 = psy.w(θ1, φ1)            # hum. out
+    w3 = psy.w(θ3, φ3)      # indoor mumidity ratio
 
-    System:
-        MX1:    Mixing box
-        HC1:    Heating Coil
-        AH:     Adiabatic Humidifier
-        MX2:    Mixing in humidifier model
-        HC2:    Reheating coil
-        TZ:     Thermal Zone
-        BL:     Building
-        Kw:     Controller - humidity
-        Kθ:     Controller - temperature
-        o:      outdoor conditions
-        0..5    unknown points (temperature, humidity ratio)
+    # Model
 
-        <----|<-------------------------------------------------|
-             |                                                  |
-             |              |-------|                           |
-        -o->MX1--0->HC1--1->|       MX2--3->HC2--F-----4->TZ--5-|
-                    |       |->AH-2-|        |   |     |  ||    |
-                    |                        |   |-Kθ4-|  BL    |
-                    |                        |                  |
-                    |                        |<-----Kθ----------|<-t5
-                    |<------------------------------Kw----------|<-w5
+    A = np.zeros((7, 7))          # coefficents of unknowns
+    b = np.zeros(7)                # vector of inputs
+    # MX1
+    A[0, 0], A[0, 4], A[0, 6], b[1] = UA, -UA, 2, UA*(θ3-θ1)
+    A[1, 1], b[1] = 1, w1
+    A[2, 0], A[2, 6], b[2] = m * c, -1, m * c * θ1
+    A[3, 2], A[3, 6], b[3] = (1-β) * m * c, 1, (1 - β) * m * c * θ3
+    A[4, 3], b[4] = 1, w3
+    A[5, 5], b[5] = 1, w3
+    A[6, 2], A[6, 4], b[6] = - (1 - β), 1, β * θ3
 
-    16 Unknowns
-        0..5: 2*6 points (temperature, humidity ratio)
-        QsHC1, QsHC2, QsTZ, QlTZ
-    """
-    from scipy.optimize import least_squares
+    x = np.linalg.solve(A, b)
+    return x
 
-    def Saturation(m):
-        """
-        Used in VAV to find the mass flow which solves θS = θSsp
-        Parameters
-        ----------
-            m : mass flow rate of dry air
 
-        Returns
-        -------
-            θS - θSsp: difference between supply temp. and its set point
-
-        """
-        x = ModelRecAir(m, α, β,
-                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-        θS = x[8]
-        return (θS - θSsp)
+def RecHXdry(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
 
     plt.close('all')
-    wO = psy.w(θO, φO)            # hum. out
+    w1 = psy.w(θ1, φ1)            # hum. out
+    w3 = psy.w(θ3, φ3)
+    # Mass flow rate for design conditions
+    # Supplay air mass flow rate
+    # QsZ = UA*(θO - θIsp) + mi*c*(θO - θIsp)
+    # m = - QsZ/(c*(θS - θIsp)
+    # where
+    # θO, wO = -1, 3.5e-3           # outdoor
+    # θS = 30                       # supply air
+    # mid = 2.18                     # infiltration
+    # QsZ = UA * (θOd - θ3) + mid * c * (θOd - θ3)
+    # m = - QsZ / (c * (θS - θ3))
+    # m = 4
+    print(f'm = {m: 5.3f} kg/s constant for design conditions:')
+    print(f'    [θSd = {θS: 3.1f} °C, mi = 2.18 kg/S, θO = -1°C, φ0 = 100%]')
 
-    # Mass flow rate
-    res = least_squares(Saturation, 5, bounds=(0, 10))
-    if res.cost < 1e-10:
-        m = float(res.x)
-    else:
-        print('RecAirVAV: No solution for m')
+    # Model
+    x = ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA)
+    print("Qx = ", x[6])
 
-    print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAir(m, α, β,
-                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-
-    # ΔθS, m = 2, 1                   # initial temp; diff; flow rate
-    # while ΔθS > 0.01:
-    #     m = m + 0.01
-    #     # Model
-    #     x = ModelRecAir(m, θSsp, mi, θO, φO, α, β)
-    #     θS = x[8]
-    #     ΔθS = -(θSsp - θS)
-
-    θ = np.append(θO, x[0:12:2])
-    w = np.append(wO, x[1:12:2])
+    θ = np.append(θ1, x[0:5:2])
+    w = np.append(w1, x[1:6:2])
+    θ = np.append(θ, θ3)
+    w = np.append(w, w3)
 
     # Adjancy matrix
-    # Points calc.  o   0   1   2   3   4   5       Elements
-    # Points pplot  0   1   2   3   4   5   6       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, -1],     # MX1
-                  [+0, -1, +1, +0, +0, +0, +0],     # HC1
-                  [+0, +0, -1, +1, +0, +0, +0],     # AH
-                  [+0, +0, -1, -1, +1, +0, +0],     # MX2
-                  [+0, +0, +0, +0, -1, +1, +0],     # HC2
-                  [+0, +0, +0, +0, +0, -1, +1]])    # TZ
+    # Points calc.  1   s   2   4   3      Elements
+    # Points pplot  0   1   2   3   4       Elements
+    A = np.array([[-1, +1, +0, +0, +0],     # XH
+                  [+0, +0, -1, +1, -1]])    # XC
 
     psy.chartA(θ, w, A)
 
@@ -327,20 +279,16 @@ def RecAirVAV(α=1, β=0.1,
     P.columns = ['θ [°C]', 'w [g/kg]']
 
     output = P.to_string(formatters={
-        'θ [°C]': '{:,.2f}'.format,
+        't [°C]': '{:,.2f}'.format,
         'w [g/kg]': '{:,.2f}'.format
     })
     print()
     print(output)
 
-    Q = pd.Series(x[12:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
-    # Q.columns = ['kW']
-    pd.options.display.float_format = '{:,.2f}'.format
-    print()
-    print(Q.to_frame().T / 1000, 'kW')
+    # Q = pd.Series(x[9:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
+    # # Q.columns = ['kW']
+    # pd.options.display.float_format = '{:,.2f}'.format
+    # print()
+    # print(Q.to_frame().T / 1000, 'kW')
 
     return None
-
-
-# RecAirCAV()
-# RecAirVAV()
