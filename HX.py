@@ -101,32 +101,6 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
         A[6, 0], A[6, 4], b[6] = - (1 - β), 1, β * θ3
         A[7, 1], A[7, 5], b[7] = - (1 - β), 1, β * w3
         A[8, 3], b[8] = 1, w1
-        
-        # A[0, 0], A[0, 10], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        # A[1, 1], A[1, 11], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
-        # # HC1
-        # A[2, 0], A[2, 2], A[2, 12], b[2] = m * c, -m * c, 1, 0
-        # A[3, 1], A[3, 3], b[3] = m * l, -m * l, 0
-        # # AH
-        # A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
-        # A[5, 4], A[5, 5] = psy.wsp(θs0), -1
-        # b[5] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
-        # # MX2
-        # A[6, 2], A[6, 4], A[6, 6], b[6] = β * m * c, (1 - β) * m * c, -m * c, 0
-        # A[7, 3], A[7, 5], A[7, 7], b[7] = β * m * l, (1 - β) * m * l, -m * l, 0
-        # # HC2
-        # A[8, 6], A[8, 8], A[8, 13], b[8] = m * c, -m * c, 1, 0
-        # A[9, 7], A[9, 9], b[9] = m * l, -m * l, 0
-        # # TZ
-        # A[10, 8], A[10, 10], A[10, 14], b[10] = m * c, -m * c, 1, 0
-        # A[11, 9], A[11, 11], A[11, 15], b[11] = m * l, -m * l, 1, 0
-        # # BL
-        # A[12, 10], A[12, 14], b[12] = (UA + mi * c), 1, (UA + mi * c
-        #                                                  ) * θO + Qsa
-        # A[13, 11], A[13, 15], b[13] = mi * l, 1, mi * l * wO + Qla
-        # # Kθ & Kw
-        # A[14, 10], A[14, 12], b[14] = Kθ, 1, Kθ * θIsp
-        # A[15, 11], A[15, 13], b[15] = Kw, 1, Kw * wIsp
 
         x = np.linalg.solve(A, b)
         Δ_θs = abs(θs0 - x[4])
@@ -134,7 +108,7 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
     return x
 
 
-def RecHX(β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
+def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
     """
     Model:
         Heating and adiabatic humidification
@@ -197,13 +171,15 @@ def RecHX(β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
     # θO, wO = -1, 3.5e-3           # outdoor
     # θS = 30                       # supply air
     # mid = 2.18                     # infiltration
-    QsZ = UA * (θOd - θ3) + mid * c * (θOd - θ3)
-    m = - QsZ / (c * (θS - θ3))
+    # QsZ = UA * (θOd - θ3) + mid * c * (θOd - θ3)
+    # m = - QsZ / (c * (θS - θ3))
+    # m = 4
     print(f'm = {m: 5.3f} kg/s constant for design conditions:')
     print(f'    [θSd = {θS: 3.1f} °C, mi = 2.18 kg/S, θO = -1°C, φ0 = 100%]')
 
     # Model
     x = ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA)
+    print("Qx = ", x[8])
 
     θ = np.append(θ1, x[0:5:2])
     w = np.append(w1, x[1:6:2])
@@ -212,9 +188,9 @@ def RecHX(β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
 
     # Adjancy matrix
     # Points calc.  1   s   2   4   3       Elements
-    # Points pplot  0   1   2   3   4   5   6       Elements
+    # Points pplot  0   1   2   3   4       Elements
     A = np.array([[-1, +0, +1, +0, +0],     # XH
-                  [+0, -1, +0, +1, -1]])    # TZ
+                  [+0, -1, +0, +1, -1]])    # XC
 
     psy.chartA(θ, w, A)
 

@@ -19,11 +19,11 @@ font = {'weight' : 'bold',
         'size'   : 30}
 plt.rc('font', **font)
 
-def RecHX_wd(β=0.1, θS=30, θ3=18, φ3=0.5, θ1=-1, φ1=1):
-
+def RecHX_wd(m=4, β=0.1, θ3=18, φ3=0.5, θ1=-1, φ1=1):
+    θS = 30
     UA = 935.83
     from HX import RecHX
-    RecHX(β, θS, θ3, φ3, θ1, φ1, UA)
+    RecHX(m, β, θS, θ3, φ3, θ1, φ1, UA)
 
 interact(RecHX_wd, β=(0,0.99,0.1),
          θSsp = (20,50,2),
