@@ -71,7 +71,7 @@ def mixing(m=1, θ0=3, φ0=0.8, θ1=32, φ1=0.95, α=0.5):
         Mixing with given ration
         Adiabatic humidification / condensation
         """
-        A = np.zeros((4, 4))            # coefficents of unknowns
+        A = np.zeros((4, 4))            # coefficients of unknowns
         b = np.zeros(4)                 # vector of inputs
         A[0, 0] = m * c
         b[0] = α * m * c * θ0 + (1 - α) * m * c * θ1
@@ -123,7 +123,7 @@ def mixing(m=1, θ0=3, φ0=0.8, θ1=32, φ1=0.95, α=0.5):
     return
 
 
-# Uncommet next line in order to test
+# Uncomment next line in order to test
 # x = mixing(m=1, θ0=0, φ0=0.8, θ1=32, φ1=0.95, α=0.5)
 # >>> θ2 = 16.00 °C, w2 = 16.03 g/kg
 # >>> θ3 = 19.80 °C, w3 = 14.51 g/kg
