@@ -4,8 +4,9 @@
 Created on Mon Apr 13 14:56:35 2020
 Updated Wed Apr 23 13:20:00 2020
 Updated on Sat Apr  2 18:57:50 2022
+Altered Thu Apr 28 15:44:00 2022
 
-@author: cghiaus
+@author: cghiaus, lbeber
 """
 import numpy as np
 import pandas as pd
