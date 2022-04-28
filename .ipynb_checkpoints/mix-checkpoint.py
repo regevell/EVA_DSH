@@ -88,6 +88,39 @@ def mixing(m=1, θ0=3, φ0=0.8, θ1=32, φ1=0.95, α=0.5):
         x = np.linalg.solve(A, b)
         return x
 
+    θs0, Δ_θs = (θ0 + θ1) / 2, 2             # initial guess saturation temp.
+
+    x = MX_AD()
+    if x[1] > psy.w(x[0], 1):
+        # Model MX & AD
+        while Δ_θs > 0.01:
+            x = MX_AD()
+            Δ_θs = abs(θs0 - x[2])
+            θs0 = x[2]
+
+        print(f'θ2 = {x[0]:5.2f} °C, w2 = {1000*x[1]:5.2f} g/kg')
+        print(f'θ3 = {x[2]:5.2f} °C, w3 = {1000*x[3]:5.2f} g/kg')
+
+        # Processes on psychrometric chart
+        # Points        o   i  0  1     Elements
+        #               0   1  1  3
+        A = np.array([[-1, -1, 1, 0],   # MX
+                      [0, 0, -1, 1]])   # AD
+        θ = np.append([θ0, θ1], x[0:4:2])
+        w = np.append([w0, w1], x[1:4:2])
+        psy.chartA(θ, w, A)
+    else:
+        x = MX()
+        print(f'θ2 = {x[0]:5.2f} °C, w2 = {1000*x[1]:5.2f} g/kg')
+        print('---')
+        # Processes on psychrometric chart
+        # Points        o   i  0        Elements
+        #               0   1  2
+        A = np.array([[-1, -1, 1]])     # MX
+        θ = np.array([θ0, θ1, x[0]])
+        w = np.array([w0, w1, x[1]])
+        psy.chartA(θ, w, A)
+    return
 
 
 # Uncomment next line in order to test
