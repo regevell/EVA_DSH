@@ -92,7 +92,7 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
     while Δ_θs > 0.01:
         # MX1
         A[0, 6], A[0, 7], A[0, 8] = -1, -1, 1
-        A[1, 2], A[1, 4], A[1, 6], A[1, 7], b[1] = UA, -UA, 2, 2, UA*(θ3-θ1)
+        A[1, 2], A[1, 0], A[1, 6], A[1, 7], b[1] = UA, -UA, 2, 2, UA*(θ3-θ1)
         A[2, 2], A[2, 8], b[2] = m * c, -1, m * c * θ1
         A[3, 0], A[3, 6], b[3] = (1-β) * m * c, 1, (1 - β) * m * c * θ3
         A[4, 1], A[4, 7], b[4] = (1-β) * m * l, 1, (1 - β) * m * l * w3
@@ -224,8 +224,8 @@ def ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA):
 
     A = np.zeros((7, 7))          # coefficents of unknowns
     b = np.zeros(7)                # vector of inputs
-    # MX1
-    A[0, 0], A[0, 4], A[0, 6], b[1] = UA, -UA, 2, UA*(θ3-θ1)
+    # HX
+    A[0, 0], A[0, 2], A[0, 6], b[0] = UA, -UA, 2, UA*(θ3-θ1)
     A[1, 1], b[1] = 1, w1
     A[2, 0], A[2, 6], b[2] = m * c, -1, m * c * θ1
     A[3, 2], A[3, 6], b[3] = (1-β) * m * c, 1, (1 - β) * m * c * θ3
@@ -237,7 +237,7 @@ def ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA):
     return x
 
 
-def RecHXdry(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
+def RecHXdry(m, β, θS, θ3, φ3, θ1, φ1, UA):
 
     plt.close('all')
     w1 = psy.w(θ1, φ1)            # hum. out
