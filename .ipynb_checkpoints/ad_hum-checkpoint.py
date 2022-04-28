@@ -1027,6 +1027,7 @@ def RecAirVAV_adTest(α=1, β=0.1,
     else:
         print('RecAirVAV: No solution for m')
 
+    print(f'm = {m: 5.3f} kg/s')
     x = ModelRecAirmama(m, α, β,
                     θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
     return x
