@@ -16,8 +16,6 @@ import matplotlib.pyplot as plt
 # UA = 935.83                 # bldg conductance
 # θIsp, wIsp = 18, 6.22e-3    # indoor conditions
 
-θOd = -1                    # outdoor design conditions
-mid = 2.18                  # infiltration design
 
 # constants
 c = 1e3                     # air specific heat J/kg K
@@ -30,8 +28,7 @@ l = 2496e3                  # latent heat J/kg
 def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
     """
     Model:
-        Heating and adiabatic humidification
-        Recycled air
+        Heat exchanger with saturation 
         CAV Constant Air Volume:
             mass flow rate calculated for design conditions
             maintained constant in all situations
@@ -47,21 +44,14 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
         φO      outdoor relative humidity for design, -
         Qsa     aux. sensible heat, W
         Qla     aux. latente heat, W
-        mi      infiltration massflow rate, kg/s
         UA      global conductivity bldg, W/K
 
     System:
-        MX1:    Mixing box
-        HC1:    Heating Coil
-        AH:     Adiabatic Humidifier
-        MX2:    Mixing in humidifier model
-        HC2:    Reheating coil
-        TZ:     Thermal Zone
-        BL:     Building
-        Kw:     Controller - humidity
-        Kθ:     Controller - temperature
-        o:      outdoor conditions
-        0..5    unknown points (temperature, humidity ratio)
+        HX:     Heat exchanger
+        XH:     Exchanger heating side
+        XC:     Exchanger cold side
+        XM:     Exchanger mixing
+        0..4    unknown points (temperature, humidity ratio)
 
         <----|<-------------------------------------------|
              |                                            |
@@ -76,9 +66,8 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
 
     Returns
     -------
-    x       vector 16 elem.:
-            θ0, w0, t1, w1, t2, w2, t3, w3, t4, w4, t5, w5,...
-                QHC1, QHC2, QsTZ, QlTZ
+    x       vector 9 elem.:
+            θs, ws, θ2, w2, θ4, w4, Qs, Ql, Qx
 
     """
     w1 = psy.w(θ1, φ1)            # hum. out
@@ -90,14 +79,17 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
     A = np.zeros((9, 9))          # coefficents of unknowns
     b = np.zeros(9)                # vector of inputs
     while Δ_θs > 0.01:
-        # MX1
+        # HX
         A[0, 6], A[0, 7], A[0, 8] = -1, -1, 1
         A[1, 2], A[1, 0], A[1, 6], A[1, 7], b[1] = UA, -UA, 2, 2, UA*(θ3-θ1)
+        # XH
         A[2, 2], A[2, 8], b[2] = m * c, -1, m * c * θ1
+        # XC
         A[3, 0], A[3, 6], b[3] = (1-β) * m * c, 1, (1 - β) * m * c * θ3
         A[4, 1], A[4, 7], b[4] = (1-β) * m * l, 1, (1 - β) * m * l * w3
         A[5, 0], A[5, 1] = psy.wsp(θs0), -1
         b[5] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        # XM
         A[6, 0], A[6, 4], b[6] = - (1 - β), 1, β * θ3
         A[7, 1], A[7, 5], b[7] = - (1 - β), 1, β * w3
         A[8, 3], b[8] = 1, w1
@@ -111,8 +103,7 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
 def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
     """
     Model:
-        Heating and adiabatic humidification
-        Recycled air
+        Heat exchanger with saturation
         CAV Constant Air Volume:
             mass flow rate calculated for design conditions
             maintained constant in all situations
@@ -131,17 +122,11 @@ def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
         UA      global conductivity bldg, W/K
 
     System:
-        MX1:    Mixing box
-        HC1:    Heating Coil
-        AH:     Adiabatic Humidifier
-        MX2:    Mixing in humidifier model
-        HC2:    Reheating coil
-        TZ:     Thermal Zone
-        BL:     Building
-        Kw:     Controller - humidity
-        Kθ:     Controller - temperature
-        o:      outdoor conditions
-        0..5    6 unknown points (temperature, humidity ratio)
+        HX:     Heat exchanger
+        XH:     Exchanger heating side
+        XC:     Exchanger cold side
+        XM:     Exchanger mixing
+        0..4    unknown points (temperature, humidity ratio)
 
         <----|<-------------------------------------------|
              |                                            |
@@ -153,9 +138,8 @@ def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
                     |                        |<-----Kθ----|<-t5
                     |<------------------------------Kw----|<-w5
 
-    16 Unknowns
-        0..5: 2*6 points (temperature, humidity ratio)
-        QsHC1, QsHC2, QsTZ, QlTZ
+    9 Unknowns
+        θs, ws, θ2, w2, θ4, w4, Qs, Ql, Qx
     Returns
     -------
     None
@@ -163,23 +147,9 @@ def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
     plt.close('all')
     w1 = psy.w(θ1, φ1)            # hum. out
     w3 = psy.w(θ3, φ3)
-    # Mass flow rate for design conditions
-    # Supplay air mass flow rate
-    # QsZ = UA*(θO - θIsp) + mi*c*(θO - θIsp)
-    # m = - QsZ/(c*(θS - θIsp)
-    # where
-    # θO, wO = -1, 3.5e-3           # outdoor
-    # θS = 30                       # supply air
-    # mid = 2.18                     # infiltration
-    # QsZ = UA * (θOd - θ3) + mid * c * (θOd - θ3)
-    # m = - QsZ / (c * (θS - θ3))
-    # m = 4
-    print(f'm = {m: 5.3f} kg/s constant for design conditions:')
-    print(f'    [θSd = {θS: 3.1f} °C, mi = 2.18 kg/S, θO = -1°C, φ0 = 100%]')
 
     # Model
     x = ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA)
-    print("Qx = ", x[8])
 
     θ = np.append(θ1, x[0:5:2])
     w = np.append(w1, x[1:6:2])
@@ -216,7 +186,50 @@ def RecHX(m=4, β=0.1, θS=30, θ3=18, φ3=0.49, θ1=-1, φ1=1, UA=935.83):
 
 
 def ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA):
+    """
+    Model:
+        Heat exchanger without saturation
+        CAV Constant Air Volume:
+            mass flow rate calculated for design conditions
+            maintained constant in all situations
 
+    INPUTS:
+        m       mass flow of supply dry air, kg/s
+        α       mixing ratio of outdoor air, -
+        β       by-pass factor of the adiabatic humidifier, -
+        θS      supply air, °C
+        θIsp    indoor air setpoint, °C
+        φIsp    indoor relative humidity set point, -
+        θO      outdoor temperature for design, °C
+        φO      outdoor relative humidity for design, -
+        Qsa     aux. sensible heat, W
+        Qla     aux. latente heat, W
+        mi      infiltration massflow rate, kg/s
+        UA      global conductivity bldg, W/K
+
+    System:
+        HX:     Heat exchanger
+        XH:     Exchanger heating side
+        XC:     Exchanger cold side
+        0..4    unknown points (temperature, humidity ratio)
+
+        <----|<-------------------------------------------|
+             |                                            |
+             |              |-------|                     |
+        -o->MX1--0->HC1--1->|       MX2--3->HC2--4->TZ--5-|
+                    /       |       |        /      ||    |
+                    |       |->AH-2-|        |      BL    |
+                    |                        |            |
+                    |                        |<-----Kθ----|<-t5
+                    |<------------------------------Kw----|<-w5
+
+
+    Returns
+    -------
+    x       vector 7 elem.:
+            θ2, w2, θs, ws, θ4, w4, Qx
+
+    """
     w1 = psy.w(θ1, φ1)            # hum. out
     w3 = psy.w(θ3, φ3)      # indoor mumidity ratio
 
@@ -238,23 +251,49 @@ def ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA):
 
 
 def RecHXdry(m, β, θS, θ3, φ3, θ1, φ1, UA):
+    """
+    Model:
+        Heat exchanger without saturation
+        CAV Constant Air Volume:
+            mass flow rate calculated for design conditions
+            maintained constant in all situations
 
+    INPUTS:
+        α   mixing ratio of outdoor air, -
+        β    by-pass factor of the adiabatic humidifier, -
+        θS      supply air, °C
+        θIsp    indoor air setpoint, °C
+        φIsp  indoor relative humidity set point, -
+        θO      outdoor temperature for design, °C
+        φO    outdoor relative humidity for design, -
+        UA      global conductivity bldg, W/K
+
+    System:
+        HX:     Heat exchanger
+        XH:     Exchanger heating side
+        XC:     Exchanger cold side
+        XM:     Exchanger mixing
+        0..4    unknown points (temperature, humidity ratio)
+
+        <----|<-------------------------------------------|
+             |                                            |
+             |              |-------|                     |
+        -o->MX1--0->HC1--1->|       MX2--3->HC2--4->TZ--5-|
+                    |       |       |        |      ||    |
+                    |       |->AH-2-|        |      BL    |
+                    |                        |            |
+                    |                        |<-----Kθ----|<-t5
+                    |<------------------------------Kw----|<-w5
+
+    7 Unknowns
+        θ2, w2, θs, ws, θ4, w4, Qx
+    Returns
+    -------
+    None
+    """
     plt.close('all')
     w1 = psy.w(θ1, φ1)            # hum. out
     w3 = psy.w(θ3, φ3)
-    # Mass flow rate for design conditions
-    # Supplay air mass flow rate
-    # QsZ = UA*(θO - θIsp) + mi*c*(θO - θIsp)
-    # m = - QsZ/(c*(θS - θIsp)
-    # where
-    # θO, wO = -1, 3.5e-3           # outdoor
-    # θS = 30                       # supply air
-    # mid = 2.18                     # infiltration
-    # QsZ = UA * (θOd - θ3) + mid * c * (θOd - θ3)
-    # m = - QsZ / (c * (θS - θ3))
-    # m = 4
-    print(f'm = {m: 5.3f} kg/s constant for design conditions:')
-    print(f'    [θSd = {θS: 3.1f} °C, mi = 2.18 kg/S, θO = -1°C, φ0 = 100%]')
 
     # Model
     x = ModelHXdry(m, β, θS, θ1, φ1, θ3, φ3, UA)
