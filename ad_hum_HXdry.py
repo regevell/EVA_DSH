@@ -28,7 +28,7 @@ l = 2496e3                  # latent heat J/kg
 # *****************************************
 # RECYCLED AIR
 # *****************************************
-def ModelRecAirmxmx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
+def ModelRecAirmxmxHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX):
     """
     Model:
         Heating and adiabatic humidification
@@ -89,39 +89,50 @@ def ModelRecAirmxmx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
     # Model
     θs0, Δ_θs = θS, 2             # initial guess saturation temp.
 
-    A = np.zeros((16, 16))          # coefficients of unknowns
-    b = np.zeros(16)                # vector of inputs
+    A = np.zeros((23, 23))          # coefficients of unknowns
+    b = np.zeros(23)                # vector of inputs
     while Δ_θs > 0.01:
+        # HX
+        A[0, 1], A[0, 3] = -1, 1
+        A[1, 0], A[1, 2], A[1, 22] = -m * c, m * c, -1
         # MX1
-        A[0, 0], A[0, 10], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        A[1, 1], A[1, 11], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
+        A[2, 2], A[2, 12], b[2] = m * c, -(1 - α) * m * c, α * m * c * θO
+        A[3, 3], A[3, 13], b[3] = m * l, -(1 - α) * m * l, α * m * l * wO
         # HC1
-        A[2, 0], A[2, 2], A[2, 12], b[2] = m * c, -m * c, 1, 0
-        A[3, 1], A[3, 3], b[3] = m * l, -m * l, 0
+        A[4, 2], A[4, 4], A[4, 14], b[4] = m * c, -m * c, 1, 0
+        A[5, 3], A[5, 5], b[5] = m * l, -m * l, 0
         # AH
-        A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
-        A[5, 4], A[5, 5] = psy.wsp(θs0), -1
-        b[5] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[6, 4], A[6, 5], A[6, 6], A[6, 7], b[6] = c, l, -c, -l, 0
+        A[7, 6], A[7, 7] = psy.wsp(θs0), -1
+        b[7] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
-        A[6, 2], A[6, 4], A[6, 6], b[6] = β * m * c, (1 - β) * m * c, -m * c, 0
-        A[7, 3], A[7, 5], A[7, 7], b[7] = β * m * l, (1 - β) * m * l, -m * l, 0
+        A[8, 4], A[8, 6], A[8, 8], b[8] = β * m * c, (1 - β) * m * c, -m * c, 0
+        A[9, 5], A[9, 7], A[9, 9], b[9] = β * m * l, (1 - β) * m * l, -m * l, 0
         # HC2
-        A[8, 6], A[8, 8], A[8, 13], b[8] = m * c, -m * c, 1, 0
-        A[9, 7], A[9, 9], b[9] = m * l, -m * l, 0
+        A[10, 8], A[10, 10], A[10, 15], b[10] = m * c, -m * c, 1, 0
+        A[11, 9], A[11, 11], b[11] = m * l, -m * l, 0
         # TZ
-        A[10, 8], A[10, 10], A[10, 14], b[10] = m * c, -m * c, 1, 0
-        A[11, 9], A[11, 11], A[11, 15], b[11] = m * l, -m * l, 1, 0
+        A[12, 10], A[12, 12], A[12, 16], b[12] = m * c, -m * c, 1, 0
+        A[13, 11], A[13, 13], A[13, 17], b[13] = m * l, -m * l, 1, 0
         # BL
-        A[12, 10], A[12, 14], b[12] = (UA + mi * c), 1, (UA + mi * c
+        A[14, 12], A[14, 16], b[14] = (UA + mi * c), 1, (UA + mi * c
                                                          ) * θO + Qsa
-        A[13, 11], A[13, 15], b[13] = mi * l, 1, mi * l * wO + Qla
+        A[15, 13], A[15, 17], b[15] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
-        A[14, 10], A[14, 12], b[14] = Kθ, 1, Kθ * θIsp
-        A[15, 11], A[15, 13], b[15] = Kw, 1, Kw * wIsp
+        A[16, 12], A[16, 14], b[16] = Kθ, 1, Kθ * θIsp
+        A[17, 13], A[17, 15], b[17] = Kw, 1, Kw * wIsp
+        # HC
+        A[18, 12], A[18, 14], A[18, 22] = -(1 - β_HX) * m * c, (1 - β_HX) * m * c, 1
+        A[19, 13], A[19, 15] = -1, 1
+        # XM
+        A[20, 12], A[20, 14], A[20, 16] = - β_HX, - (1 - β_HX), 1
+        A[21, 13], A[21, 17] = -1, 1
+        # Qx
+        A[22, 0], A[22, 2], A[22, 12], A[22, 14], A[22, 22] = UA_HX, UA_HX, -UA_HX, -UA_HX, 2
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[4])
-        θs0 = x[4]
+        Δ_θs = abs(θs0 - x[6])
+        θs0 = x[6]
     return x
 
 
