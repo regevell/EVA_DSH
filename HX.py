@@ -70,14 +70,14 @@ def ModelHX(m, β, θS, θ1, φ1, θ3, φ3, UA):
             θs, ws, θ2, w2, θ4, w4, Qs, Ql, Qx
 
     """
-    w1 = psy.w(θ1, φ1)            # hum. out
-    w3 = psy.w(θ3, φ3)      # indoor mumidity ratio
+    w1 = psy.w(θ1, φ1)            # hum out
+    w3 = psy.w(θ3, φ3)            # indoor humidity ratio
 
     # Model
     θs0, Δ_θs = θS, 2             # initial guess saturation temp.
 
-    A = np.zeros((9, 9))          # coefficents of unknowns
-    b = np.zeros(9)                # vector of inputs
+    A = np.zeros((9, 9))          # coefficients of unknowns
+    b = np.zeros(9)               # vector of inputs
     while Δ_θs > 0.01:
         # HX
         A[0, 6], A[0, 7], A[0, 8] = -1, -1, 1
