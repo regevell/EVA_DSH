@@ -28,7 +28,7 @@ l = 2496e3                  # latent heat J/kg
 # *****************************************
 # RECYCLED AIR
 # *****************************************
-def ModelRecAirmxmx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
+def ModelRecAirmxmxHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX):
     """
     Model:
         Heating and adiabatic humidification
@@ -89,43 +89,54 @@ def ModelRecAirmxmx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
     # Model
     θs0, Δ_θs = θS, 2             # initial guess saturation temp.
 
-    A = np.zeros((16, 16))          # coefficients of unknowns
-    b = np.zeros(16)                # vector of inputs
+    A = np.zeros((23, 23))          # coefficients of unknowns
+    b = np.zeros(23)                # vector of inputs
     while Δ_θs > 0.01:
+        # HX
+        A[0, 1], A[0, 3] = -1, 1
+        A[1, 0], A[1, 2], A[1, 22] = -m * c, m * c, -1
         # MX1
-        A[0, 0], A[0, 10], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        A[1, 1], A[1, 11], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
+        A[2, 2], A[2, 12], b[2] = m * c, -(1 - α) * m * c, α * m * c * θO
+        A[3, 3], A[3, 13], b[3] = m * l, -(1 - α) * m * l, α * m * l * wO
         # HC1
-        A[2, 0], A[2, 2], A[2, 12], b[2] = m * c, -m * c, 1, 0
-        A[3, 1], A[3, 3], b[3] = m * l, -m * l, 0
+        A[4, 2], A[4, 4], A[4, 14], b[4] = m * c, -m * c, 1, 0
+        A[5, 3], A[5, 5], b[5] = m * l, -m * l, 0
         # AH
-        A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
-        A[5, 4], A[5, 5] = psy.wsp(θs0), -1
-        b[5] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[6, 4], A[6, 5], A[6, 6], A[6, 7], b[6] = c, l, -c, -l, 0
+        A[7, 6], A[7, 7] = psy.wsp(θs0), -1
+        b[7] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
-        A[6, 2], A[6, 4], A[6, 6], b[6] = β * m * c, (1 - β) * m * c, -m * c, 0
-        A[7, 3], A[7, 5], A[7, 7], b[7] = β * m * l, (1 - β) * m * l, -m * l, 0
+        A[8, 4], A[8, 6], A[8, 8], b[8] = β * m * c, (1 - β) * m * c, -m * c, 0
+        A[9, 5], A[9, 7], A[9, 9], b[9] = β * m * l, (1 - β) * m * l, -m * l, 0
         # HC2
-        A[8, 6], A[8, 8], A[8, 13], b[8] = m * c, -m * c, 1, 0
-        A[9, 7], A[9, 9], b[9] = m * l, -m * l, 0
+        A[10, 8], A[10, 10], A[10, 15], b[10] = m * c, -m * c, 1, 0
+        A[11, 9], A[11, 11], b[11] = m * l, -m * l, 0
         # TZ
-        A[10, 8], A[10, 10], A[10, 14], b[10] = m * c, -m * c, 1, 0
-        A[11, 9], A[11, 11], A[11, 15], b[11] = m * l, -m * l, 1, 0
+        A[12, 10], A[12, 12], A[12, 16], b[12] = m * c, -m * c, 1, 0
+        A[13, 11], A[13, 13], A[13, 17], b[13] = m * l, -m * l, 1, 0
         # BL
-        A[12, 10], A[12, 14], b[12] = (UA + mi * c), 1, (UA + mi * c
+        A[14, 12], A[14, 16], b[14] = (UA + mi * c), 1, (UA + mi * c
                                                          ) * θO + Qsa
-        A[13, 11], A[13, 15], b[13] = mi * l, 1, mi * l * wO + Qla
+        A[15, 13], A[15, 17], b[15] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
-        A[14, 10], A[14, 12], b[14] = Kθ, 1, Kθ * θIsp
-        A[15, 11], A[15, 13], b[15] = Kw, 1, Kw * wIsp
+        A[16, 12], A[16, 14], b[16] = Kθ, 1, Kθ * θIsp
+        A[17, 13], A[17, 15], b[17] = Kw, 1, Kw * wIsp
+        # HC
+        A[18, 12], A[18, 14], A[18, 22] = -(1 - β_HX) * m * c, (1 - β_HX) * m * c, 1
+        A[19, 13], A[19, 15] = -1, 1
+        # XM
+        A[20, 12], A[20, 14], A[20, 16] = - β_HX, - (1 - β_HX), 1
+        A[21, 13], A[21, 17] = -1, 1
+        # Qx
+        A[22, 0], A[22, 2], A[22, 12], A[22, 14], A[22, 22] = UA_HX, UA_HX, -UA_HX, -UA_HX, 2
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[4])
-        θs0 = x[4]
+        Δ_θs = abs(θs0 - x[6])
+        θs0 = x[6]
     return x
 
 
-def ModelRecAirmxma(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
+def ModelRecAirmxmaHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX):
     """
     Model:
         Heating and adiabatic humidification
@@ -186,46 +197,57 @@ def ModelRecAirmxma(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
     # Model
     θs0, Δ_θs = θS, 2             # initial guess saturation temp.
 
-    A = np.zeros((18, 18))          # coefficients of unknowns
-    b = np.zeros(18)                # vector of inputs
+    A = np.zeros((25, 25))          # coefficients of unknowns
+    b = np.zeros(25)                # vector of inputs
     while Δ_θs > 0.01:
+         # HX
+        A[0, 1], A[0, 3] = -1, 1
+        A[1, 0], A[1, 2], A[1, 22] = -m * c, m * c, -1
         # MX1
-        A[0, 0], A[0, 12], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        A[1, 1], A[1, 13], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
+        A[2, 2], A[2, 12], b[2] = m * c, -(1 - α) * m * c, α * m * c * θO
+        A[3, 3], A[3, 13], b[3] = m * l, -(1 - α) * m * l, α * m * l * wO
         # HC1
-        A[2, 0], A[2, 2], A[2, 14], b[2] = m * c, -m * c, 1, 0
-        A[3, 1], A[3, 3], b[3] = m * l, -m * l, 0
+        A[4, 2], A[4, 4], A[4, 14], b[4] = m * c, -m * c, 1, 0
+        A[5, 3], A[5, 5], b[5] = m * l, -m * l, 0
         # AH
-        A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
-        A[5, 4], A[5, 5] = psy.wsp(θs0), -1
-        b[5] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[6, 4], A[6, 5], A[6, 6], A[6, 7], b[6] = c, l, -c, -l, 0
+        A[7, 6], A[7, 7] = psy.wsp(θs0), -1
+        b[7] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
-        A[6, 2], A[6, 4], A[6, 6], b[6] = β * m * c, (1 - β) * m * c, -m * c, 0
-        A[7, 3], A[7, 5], A[7, 7], b[7] = β * m * l, (1 - β) * m * l, -m * l, 0
+        A[8, 4], A[8, 6], A[8, 8], b[8] = β * m * c, (1 - β) * m * c, -m * c, 0
+        A[9, 5], A[9, 7], A[9, 9], b[9] = β * m * l, (1 - β) * m * l, -m * l, 0
         #MX_AD2
-        A[8, 6], A[8, 7], A[8, 8], A[8, 9], b[8] = c, l, -c, -l, 0
-        A[9, 8], A[9, 9], b[9] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[10, 8], A[10, 9], A[10, 10], A[10, 11], b[10] = c, l, -c, -l, 0
+        A[11, 10], A[11, 11], b[11] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # HC2
-        A[10, 8], A[10, 10], A[10, 15], b[10] = m * c, -m * c, 1, 0
-        A[11, 9], A[11, 11], b[11] = m * l, -m * l, 0
+        A[12, 10], A[12, 12], A[12, 17], b[12] = m * c, -m * c, 1, 0
+        A[13, 11], A[13, 13], b[13] = m * l, -m * l, 0
         # TZ
-        A[12, 10], A[12, 12], A[12, 16], b[12] = m * c, -m * c, 1, 0
-        A[13, 11], A[13, 13], A[13, 17], b[13] = m * l, -m * l, 1, 0
+        A[14, 12], A[14, 14], A[14, 18], b[14] = m * c, -m * c, 1, 0
+        A[15, 13], A[15, 15], A[15, 19], b[15] = m * l, -m * l, 1, 0
         # BL
-        A[14, 13], A[14, 16], b[14] = (UA + mi * c), 1, (UA + mi * c
+        A[16, 15], A[16, 18], b[16] = (UA + mi * c), 1, (UA + mi * c
                                                          ) * θO + Qsa
-        A[15, 13], A[15, 17], b[15] = mi * l, 1, mi * l * wO + Qla
+        A[17, 15], A[17, 19], b[17] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
-        A[16, 12], A[16, 14], b[16] = Kθ, 1, Kθ * θIsp
-        A[17, 13], A[17, 15], b[17] = Kw, 1, Kw * wIsp
+        A[18, 14], A[18, 16], b[18] = Kθ, 1, Kθ * θIsp
+        A[19, 15], A[19, 17], b[19] = Kw, 1, Kw * wIsp
+        # HC
+        A[20, 14], A[20, 16], A[20, 24] = -(1 - β_HX) * m * c, (1 - β_HX) * m * c, 1
+        A[21, 15], A[21, 17] = -1, 1
+        # XM
+        A[22, 14], A[22, 16], A[22, 18] = - β_HX, - (1 - β_HX), 1
+        A[23, 15], A[23, 19] = -1, 1
+        # Qx
+        A[24, 0], A[24, 2], A[24, 14], A[24, 16], A[24, 24] = UA_HX, UA_HX, -UA_HX, -UA_HX, 2
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[4])
-        θs0 = x[4]
+        Δ_θs = abs(θs0 - x[6])
+        θs0 = x[6]
     return x
 
 
-def ModelRecAirmamx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
+def ModelRecAirmamxHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX):
     """
     Model:
         Heating and adiabatic humidification
@@ -288,46 +310,57 @@ def ModelRecAirmamx(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
     # Model
     θs0, Δ_θs = θS, 2  # initial guess saturation temp.
 
-    A = np.zeros((18, 18))  # coefficients of unknowns
-    b = np.zeros(18)  # vector of inputs
+    A = np.zeros((25, 25))  # coefficients of unknowns
+    b = np.zeros(25)  # vector of inputs
     while Δ_θs > 0.01:
+        # HX
+        A[0, 1], A[0, 3] = -1, 1
+        A[1, 0], A[1, 2], A[1, 22] = -m * c, m * c, -1
         # MX1
-        A[0, 0], A[0, 12], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        A[1, 1], A[1, 13], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
+        A[2, 2], A[2, 12], b[2] = m * c, -(1 - α) * m * c, α * m * c * θO
+        A[3, 3], A[3, 13], b[3] = m * l, -(1 - α) * m * l, α * m * l * wO
         # MX_AD1
-        A[2, 0], A[2, 1], A[2, 2], A[2, 3], b[2] = c, l, -c, -l, 0
-        A[3, 2], A[3, 3], b[3] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
+        A[5, 4], A[5, 5], b[5] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # HC1
-        A[4, 2], A[4, 4], A[4, 16], b[4] = m * c, -m * c, 1, 0
-        A[5, 3], A[5, 5], b[5] = m * l, -m * l, 0
+        A[6, 4], A[6, 6], A[6, 18], b[6] = m * c, -m * c, 1, 0
+        A[7, 5], A[7, 7], b[7] = m * l, -m * l, 0
         # AH
-        A[6, 4], A[6, 5], A[6, 6], A[6, 7], b[6] = c, l, -c, -l, 0
-        A[7, 6], A[7, 7] = psy.wsp(θs0), -1
-        b[7] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[8, 6], A[8, 7], A[8, 8], A[8, 9], b[8] = c, l, -c, -l, 0
+        A[9, 8], A[9, 9] = psy.wsp(θs0), -1
+        b[9] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
-        A[8, 4], A[8, 6], A[8, 8], b[8] = β * m * c, (1 - β) * m * c, -m * c, 0
-        A[9, 5], A[9, 7], A[9, 9], b[9] = β * m * l, (1 - β) * m * l, -m * l, 0
+        A[10, 6], A[10, 8], A[10, 10], b[10] = β * m * c, (1 - β) * m * c, -m * c, 0
+        A[11, 7], A[11, 9], A[11, 11], b[11] = β * m * l, (1 - β) * m * l, -m * l, 0
         # HC2
-        A[10, 8], A[10, 10], A[10, 15], b[10] = m * c, -m * c, 1, 0
-        A[11, 9], A[11, 11], b[11] = m * l, -m * l, 0
+        A[12, 10], A[12, 12], A[12, 17], b[12] = m * c, -m * c, 1, 0
+        A[13, 11], A[13, 13], b[13] = m * l, -m * l, 0
         # TZ
-        A[12, 10], A[12, 12], A[12, 16], b[12] = m * c, -m * c, 1, 0
-        A[13, 11], A[13, 13], A[13, 17], b[13] = m * l, -m * l, 1, 0
+        A[14, 12], A[14, 14], A[14, 18], b[14] = m * c, -m * c, 1, 0
+        A[15, 13], A[15, 15], A[15, 19], b[15] = m * l, -m * l, 1, 0
         # BL
-        A[14, 13], A[14, 16], b[14] = (UA + mi * c), 1, (UA + mi * c
+        A[16, 15], A[16, 18], b[16] = (UA + mi * c), 1, (UA + mi * c
                                                          ) * θO + Qsa
-        A[15, 13], A[15, 17], b[15] = mi * l, 1, mi * l * wO + Qla
+        A[17, 15], A[17, 19], b[17] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
-        A[16, 12], A[16, 14], b[16] = Kθ, 1, Kθ * θIsp
-        A[17, 13], A[17, 15], b[17] = Kw, 1, Kw * wIsp
+        A[18, 14], A[18, 16], b[18] = Kθ, 1, Kθ * θIsp
+        A[19, 15], A[19, 17], b[19] = Kw, 1, Kw * wIsp
+        # HC
+        A[20, 14], A[20, 16], A[20, 24] = -(1 - β_HX) * m * c, (1 - β_HX) * m * c, 1
+        A[21, 15], A[21, 17] = -1, 1
+        # XM
+        A[22, 14], A[22, 16], A[22, 18] = - β_HX, - (1 - β_HX), 1
+        A[23, 15], A[23, 19] = -1, 1
+        # Qx
+        A[24, 0], A[24, 2], A[24, 14], A[24, 16], A[24, 24] = UA_HX, UA_HX, -UA_HX, -UA_HX, 2
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[6])
-        θs0 = x[6]
+        Δ_θs = abs(θs0 - x[8])
+        θs0 = x[8]
     return x
 
 
-def ModelRecAirmama(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
+def ModelRecAirmamaHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX):
     """
     Model:
         Heating and adiabatic humidification
@@ -388,51 +421,62 @@ def ModelRecAirmama(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
     # Model
     θs0, Δ_θs = θS, 2  # initial guess saturation temp.
 
-    A = np.zeros((20, 20))  # coefficients of unknowns
-    b = np.zeros(20)  # vector of inputs
+    A = np.zeros((27, 27))  # coefficients of unknowns
+    b = np.zeros(27)  # vector of inputs
     while Δ_θs > 0.01:
+        # HX
+        A[0, 1], A[0, 3] = -1, 1
+        A[1, 0], A[1, 2], A[1, 22] = -m * c, m * c, -1
         # MX1
-        A[0, 0], A[0, 12], b[0] = m * c, -(1 - α) * m * c, α * m * c * θO
-        A[1, 1], A[1, 13], b[1] = m * l, -(1 - α) * m * l, α * m * l * wO
+        A[2, 2], A[2, 12], b[2] = m * c, -(1 - α) * m * c, α * m * c * θO
+        A[3, 3], A[3, 13], b[3] = m * l, -(1 - α) * m * l, α * m * l * wO
         # MX_AD1
-        A[2, 0], A[2, 1], A[2, 2], A[2, 3], b[2] = c, l, -c, -l, 0
-        A[3, 2], A[3, 3], b[3] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[4, 2], A[4, 3], A[4, 4], A[4, 5], b[4] = c, l, -c, -l, 0
+        A[5, 4], A[5, 5], b[5] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # HC1
-        A[4, 2], A[4, 4], A[4, 16], b[4] = m * c, -m * c, 1, 0
-        A[5, 3], A[5, 5], b[5] = m * l, -m * l, 0
+        A[6, 4], A[6, 6], A[6, 18], b[6] = m * c, -m * c, 1, 0
+        A[7, 5], A[7, 7], b[7] = m * l, -m * l, 0
         # AH
-        A[6, 4], A[6, 5], A[6, 6], A[6, 7], b[6] = c, l, -c, -l, 0
-        A[7, 6], A[7, 7] = psy.wsp(θs0), -1
-        b[7] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[8, 6], A[8, 7], A[8, 8], A[8, 9], b[8] = c, l, -c, -l, 0
+        A[9, 8], A[9, 9] = psy.wsp(θs0), -1
+        b[9] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
-        A[8, 4], A[8, 6], A[8, 8], b[8] = β * m * c, (1 - β) * m * c, -m * c, 0
-        A[9, 5], A[9, 7], A[9, 9], b[9] = β * m * l, (1 - β) * m * l, -m * l, 0
-        # MX_AD1
-        A[10, 8], A[10, 9], A[10, 10], A[10, 11], b[10] = c, l, -c, -l, 0
-        A[11, 10], A[11, 11], b[11] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[10, 6], A[10, 8], A[10, 10], b[10] = β * m * c, (1 - β) * m * c, -m * c, 0
+        A[11, 7], A[11, 9], A[11, 11], b[11] = β * m * l, (1 - β) * m * l, -m * l, 0
+        #MX_AD2
+        A[12, 10], A[12, 11], A[12, 12], A[12, 13], b[12] = c, l, -c, -l, 0
+        A[13, 12], A[13, 13], b[13] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # HC2
-        A[12, 10], A[12, 12], A[12, 17], b[12] = m * c, -m * c, 1, 0
+        A[14, 12], A[14, 14], A[14, 19], b[14] = m * c, -m * c, 1, 0
         A[13, 11], A[13, 13], b[13] = m * l, -m * l, 0
         # TZ
-        A[14, 12], A[14, 14], A[14, 18], b[14] = m * c, -m * c, 1, 0
-        A[15, 13], A[15, 15], A[15, 19], b[15] = m * l, -m * l, 1, 0
+        A[16, 14], A[16, 16], A[16, 20], b[16] = m * c, -m * c, 1, 0
+        A[17, 15], A[17, 17], A[17, 21], b[17] = m * l, -m * l, 1, 0
         # BL
-        A[16, 15], A[16, 18], b[16] = (UA + mi * c), 1, (UA + mi * c
+        A[18, 17], A[18, 20], b[18] = (UA + mi * c), 1, (UA + mi * c
                                                          ) * θO + Qsa
-        A[17, 15], A[17, 19], b[17] = mi * l, 1, mi * l * wO + Qla
+        A[19, 17], A[19, 21], b[19] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
-        A[18, 14], A[18, 16], b[18] = Kθ, 1, Kθ * θIsp
-        A[19, 15], A[19, 17], b[19] = Kw, 1, Kw * wIsp
+        A[20, 16], A[20, 18], b[20] = Kθ, 1, Kθ * θIsp
+        A[21, 17], A[21, 19], b[21] = Kw, 1, Kw * wIsp
+        # HC
+        A[22, 16], A[22, 18], A[22, 26] = -(1 - β_HX) * m * c, (1 - β_HX) * m * c, 1
+        A[22, 17], A[22, 18] = -1, 1
+        # XM
+        A[24, 16], A[24, 18], A[24, 20] = - β_HX, - (1 - β_HX), 1
+        A[25, 17], A[25, 21] = -1, 1
+        # Qx
+        A[26, 0], A[26, 2], A[26, 16], A[26, 18], A[26, 26] = UA_HX, UA_HX, -UA_HX, -UA_HX, 2
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[6])
-        θs0 = x[6]
+        Δ_θs = abs(θs0 - x[8])
+        θs0 = x[8]
     return x
 
 
-def RecAirVAVmxmx(α=1, β=0.1,
+def RecAirVAVmxmxHXdry(α=1, β=0.1, β_HX=0.1
               θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-              Qsa=0, Qla=0, mi=2.18, UA=935.83):
+              Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000):
     """
     Created on Fri Apr 10 13:57:22 2020
     Heating & Adiabatic humidification & Re-heating
@@ -494,9 +538,9 @@ def RecAirVAVmxmx(α=1, β=0.1,
             θS - θSsp: difference between supply temp. and its set point
 
         """
-        x = ModelRecAirmxmx(m, α, β,
-                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-        θS = x[8]
+        x = ModelRecAirmxmxHXdry(m, α, β, β_HX
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+        θS = x[10]
         return (θS - θSsp)
 
     plt.close('all')
@@ -510,29 +554,33 @@ def RecAirVAVmxmx(α=1, β=0.1,
         print('RecAirVAV: No solution for m')
 
     print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAirmxmx(m, α, β,
-                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
+    x = ModelRecAirmxmxHXdry(m, α, β, β_HX
+                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
     # ΔθS, m = 2, 1                   # initial temp; diff; flow rate
     # while ΔθS > 0.01:
     #     m = m + 0.01
     #     # Model
     #     x = ModelRecAirmxmx(m, θSsp, mi, θO, φO, α, β)
-    #     θS = x[8]
+    #     θS = x[10]
     #     ΔθS = -(θSsp - θS)
 
-    θ = np.append(θO, x[0:12:2])
-    w = np.append(wO, x[1:12:2])
+    θ = np.append(θO, x[0:16:2])
+    w = np.append(wO, x[1:17:2])
 
     # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5       Elements
-    # Points plot   0   1   2   3   4   5   6       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, -1],     # MX1
-                  [+0, -1, +1, +0, +0, +0, +0],     # HC1
-                  [+0, +0, -1, +1, +0, +0, +0],     # AH
-                  [+0, +0, -1, -1, +1, +0, +0],     # MX2
-                  [+0, +0, +0, +0, -1, +1, +0],     # HC2
-                  [+0, +0, +0, +0, +0, -1, +1]])    # TZ
+    # Points calc.  o   0   1   2   3   4   5   6   7   8       Elements
+    # Points plot   0   1   2   3   4   5   6   7   8   9       Elements
+    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0],     # HX
+                  [+0, -1, +1, +0, +0, +0, +0, -1, +0, +0],     # MX1
+                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # HC1
+                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0],     # AH
+                  [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0],     # MX2
+                  [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
+                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
+                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
+                  [+0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
+                      
 
     psy.chartA(θ, w, A)
 
@@ -548,7 +596,7 @@ def RecAirVAVmxmx(α=1, β=0.1,
     print()
     print(output)
 
-    Q = pd.Series(x[12:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
+    Q = pd.Series(x[18:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx'])
     # Q.columns = ['kW']
     pd.options.display.float_format = '{:,.2f}'.format
     print()
@@ -557,9 +605,9 @@ def RecAirVAVmxmx(α=1, β=0.1,
     return None
 
 
-def RecAirVAVmxma(α=1, β=0.1,
+def RecAirVAVmxmaHXdry(α=1, β=0.1, β_HX=0.1
               θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-              Qsa=0, Qla=0, mi=2.18, UA=935.83):
+              Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000):
     """
     Created on Fri Apr 10 13:57:22 2020
     Heating & Adiabatic humidification & Re-heating
@@ -623,9 +671,9 @@ def RecAirVAVmxma(α=1, β=0.1,
             θS - θSsp: difference between supply temp. and its set point
 
         """
-        x = ModelRecAirmxma(m, α, β,
-                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-        θS = x[10]
+        x = ModelRecAirmxmaHXdry(m, α, β, β_HX,
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+        θS = x[12]
         return (θS - θSsp)
 
     plt.close('all')
@@ -639,8 +687,8 @@ def RecAirVAVmxma(α=1, β=0.1,
         print('RecAirVAV: No solution for m')
 
     print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAirmxma(m, α, β,
-                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
+    x = ModelRecAirmxmaHX_dry(m, α, β, β_HX
+                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
     # ΔθS, m = 2, 1                   # initial temp; diff; flow rate
     # while ΔθS > 0.01:
@@ -650,19 +698,22 @@ def RecAirVAVmxma(α=1, β=0.1,
     #     θS = x[8]
     #     ΔθS = -(θSsp - θS)
 
-    θ = np.append(θO, x[0:14:2])
-    w = np.append(wO, x[1:14:2])
+    θ = np.append(θO, x[0:18:2])
+    w = np.append(wO, x[1:19:2])
 
     # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6       Elements
-    # Points plot   0   1   2   3   4   5   6   7       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, -1],     # MX1
-                  [+0, -1, +1, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, -1, +1, +0, +0, +0, +0],     # AH
-                  [+0, +0, -1, -1, +1, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, -1, +1, +0, +0],     # MX_AD2
-                  [+0, +0, +0, +0, +0, -1, +1, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, -1, +1]])    # TZ
+    # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
+    # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
+    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # HX
+                  [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
+                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # HC1
+                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # AH
+                  [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],     # MX2
+                  [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],     # MX_AD2
+                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
+                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
+                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
+                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
 
     psy.chartA(θ, w, A)
 
@@ -678,7 +729,7 @@ def RecAirVAVmxma(α=1, β=0.1,
     print()
     print(output)
 
-    Q = pd.Series(x[14:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
+    Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx'])
     # Q.columns = ['kW']
     pd.options.display.float_format = '{:,.2f}'.format
     print()
@@ -688,9 +739,9 @@ def RecAirVAVmxma(α=1, β=0.1,
 # RecAirCAV()
 
 
-def RecAirVAVmamx(α=1, β=0.1,
+def RecAirVAVmamxHXdry(α=1, β=0.1, β_HX=0.1
               θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-              Qsa=0, Qla=0, mi=2.18, UA=935.83):
+              Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000):
     """
     Created on Fri Apr 10 13:57:22 2020
     Heating & Adiabatic humidification & Re-heating
@@ -753,9 +804,9 @@ def RecAirVAVmamx(α=1, β=0.1,
             θS - θSsp: difference between supply temp. and its set point
 
         """
-        x = ModelRecAirmamx(m, α, β,
-                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-        θS = x[10]
+        x = ModelRecAirmamxHXdry(m, α, β, β_HX,
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+        θS = x[12]
         return (θS - θSsp)
 
     plt.close('all')
@@ -769,8 +820,8 @@ def RecAirVAVmamx(α=1, β=0.1,
         print('RecAirVAV: No solution for m')
 
     print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAirmamx(m, α, β,
-                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
+    x = ModelRecAirmamxHXdry(m, α, β, β_HX,
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
     # ΔθS, m = 2, 1                   # initial temp; diff; flow rate
     # while ΔθS > 0.01:
@@ -780,19 +831,22 @@ def RecAirVAVmamx(α=1, β=0.1,
     #     θS = x[8]
     #     ΔθS = -(θSsp - θS)
 
-    θ = np.append(θO, x[0:14:2])
-    w = np.append(wO, x[1:14:2])
+    θ = np.append(θO, x[0:18:2])
+    w = np.append(wO, x[1:19:2])
 
     # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6       Elements
-    # Points plot   0   1   2   3   4   5   6   7       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, -1],     # MX1
-                  [+0, -1, +1, +0, +0, +0, +0, +0],     # MX_AD1
-                  [+0, +0, -1, +1, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, -1, +1, +0, +0, +0],     # AH
-                  [+0, +0, +0, -1, -1, +1, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, -1, +1, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, -1, +1]])    # TZ
+    # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
+    # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
+    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # HX
+                  [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
+                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # MX_AD1
+                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # HC1
+                  [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0],     # AH
+                  [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0],     # MX2
+                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
+                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
+                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
+                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
 
     psy.chartA(θ, w, A)
 
@@ -808,7 +862,7 @@ def RecAirVAVmamx(α=1, β=0.1,
     print()
     print(output)
 
-    Q = pd.Series(x[14:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
+    Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx'])
     # Q.columns = ['kW']
     pd.options.display.float_format = '{:,.2f}'.format
     print()
@@ -818,9 +872,9 @@ def RecAirVAVmamx(α=1, β=0.1,
 # RecAirCAV()
 
 
-def RecAirVAVmama(α=1, β=0.1,
+def RecAirVAVmamaHXdry(α=1, β=0.1, β_HX=0.1
               θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-              Qsa=0, Qla=0, mi=2.18, UA=935.83):
+              Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000):
     """
     Created on Fri Apr 10 13:57:22 2020
     Heating & Adiabatic humidification & Re-heating
@@ -884,9 +938,9 @@ def RecAirVAVmama(α=1, β=0.1,
             θS - θSsp: difference between supply temp. and its set point
 
         """
-        x = ModelRecAirmama(m, α, β,
-                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
-        θS = x[12]
+        x = ModelRecAirmamaHXdry(m, α, β, β_HX,
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+        θS = x[14]
         return (θS - θSsp)
 
     plt.close('all')
@@ -900,8 +954,8 @@ def RecAirVAVmama(α=1, β=0.1,
         print('RecAirVAV: No solution for m')
 
     print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAirmama(m, α, β,
-                    θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA)
+    x = ModelRecAirmamaHXdry(m, α, β, β_HX,
+                        θSsp, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
     # ΔθS, m = 2, 1                   # initial temp; diff; flow rate
     # while ΔθS > 0.01:
     #     m = m + 0.01
@@ -910,20 +964,23 @@ def RecAirVAVmama(α=1, β=0.1,
     #     θS = x[8]
     #     ΔθS = -(θSsp - θS)
 
-    θ = np.append(θO, x[0:16:2])
-    w = np.append(wO, x[1:16:2])
+    θ = np.append(θO, x[0:20:2])
+    w = np.append(wO, x[1:21:2])
 
     # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6   7       Elements
-    # Points plot   0   1   2   3   4   5   6   7   8       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, -1],     # MX1
-                  [+0, -1, +1, +0, +0, +0, +0, +0, +0],     # MX_AD1
-                  [+0, +0, -1, +1, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, -1, +1, +0, +0, +0, +0],     # AH
-                  [+0, +0, +0, -1, -1, +1, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, -1, +1, +0, +0],     # MX_AD2
-                  [+0, +0, +0, +0, +0, +0, -1, +1, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, +0, -1, +1]])    # TZ
+    # Points calc.  o   0   1   2   3   4   5   6   7   8   9   10      Elements
+    # Points plot   0   1   2   3   4   5   6   7   8   9   10  11      Elements
+    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # HX
+                  [+0, -1, +1, +0, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
+                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0, +0],     # MX_AD1
+                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # HC1
+                  [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # AH
+                  [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],     # MX2
+                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],     # MX_AD2
+                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
+                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
+                  [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
+                  [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
 
     psy.chartA(θ, w, A)
 
@@ -939,7 +996,7 @@ def RecAirVAVmama(α=1, β=0.1,
     print()
     print(output)
 
-    Q = pd.Series(x[16:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ'])
+    Q = pd.Series(x[22:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx'])
     # Q.columns = ['kW']
     pd.options.display.float_format = '{:,.2f}'.format
     print()
