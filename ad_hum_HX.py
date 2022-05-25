@@ -23,6 +23,7 @@ mid = 2.18  # infiltration design
 c = 1e3  # air specific heat J/kg K
 l = 2496e3  # latent heat J/kg
 
+
 # *****************************************
 # RECYCLED AIR
 # *****************************************
@@ -498,7 +499,7 @@ def ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
         A[13, 12], A[13, 13], b[13] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # HC2
         A[14, 12], A[14, 14], A[14, 19] = m * c, -m * c, 1
-        A[13, 11], A[13, 13] = m * l, -m * l
+        A[15, 13], A[15, 15] = m * l, -m * l
         # TZ
         A[16, 14], A[16, 16], A[16, 20] = m * c, -m * c, 1
         A[17, 15], A[17, 17], A[17, 21] = m * l, -m * l, 1
@@ -526,8 +527,8 @@ def ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
 
 
 def RecAirVAVmxmxHX(α=1, β=0.1, β_HX=0.1,
-                    θSsp = 30, θIsp = 18, φIsp = 0.49, θO = -1, φO = 1,
-                    Qsa = 0, Qla = 0, mi = 2.18, UA = 935.83, UA_HX = 5000):
+                    θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
+                    Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
     Heat Exchanger & Heating & Adiabatic humidification & Re-heating
     Recirculated air
@@ -613,52 +614,54 @@ def RecAirVAVmxmxHX(α=1, β=0.1, β_HX=0.1,
         print('RecAirVAV: No solution for m')
 
     print(f'm = {m: 5.3f} kg/s')
-    x = ModelRecAirmxmxHX(m, α, β, β_HX,θSsp, θIsp, φIsp,
+    x = ModelRecAirmxmxHX(m, α, β, β_HX, θSsp, θIsp, φIsp,
                           θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
-    θ = np.append(θO, x[0:16:2])
-    w = np.append(wO, x[1:17:2])
+    if not check:
+        θ = np.append(θO, x[0:16:2])
+        w = np.append(wO, x[1:17:2])
 
-    # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6   7   8       Elements
-    # Points plot   0   1   2   3   4   5   6   7   8   9       Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0],     # XH
-                  [+0, -1, +1, +0, +0, +0, +0, -1, +0, +0],     # MX1
-                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0],     # AH
-                  [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
-                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
-                  [+0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
+        # Adjacency matrix
+        # Points calc.  o   0   1   2   3   4   5   6   7   8       Elements
+        # Points plot   0   1   2   3   4   5   6   7   8   9       Elements
+        A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0],  # XH
+                      [+0, -1, +1, +0, +0, +0, +0, -1, +0, +0],  # MX1
+                      [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0],  # HC1
+                      [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0],  # AH
+                      [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0],  # MX2
+                      [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0],  # HC2
+                      [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0],  # TZ
+                      [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0],  # XC
+                      [+0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])  # XM
 
-    psy.chartA(θ, w, A)
+        psy.chartA(θ, w, A)
 
-    θ = pd.Series(θ)
-    w = 1000 * pd.Series(w)
-    P = pd.concat([θ, w], axis=1)  # points
-    P.columns = ['θ [°C]', 'w [g/kg]']
+        θ = pd.Series(θ)
+        w = 1000 * pd.Series(w)
+        P = pd.concat([θ, w], axis=1)  # points
+        P.columns = ['θ [°C]', 'w [g/kg]']
 
-    output = P.to_string(formatters={
-        'θ [°C]': '{:,.2f}'.format,
-        'w [g/kg]': '{:,.2f}'.format
-    })
-    print()
-    print(output)
+        output = P.to_string(formatters={
+            'θ [°C]': '{:,.2f}'.format,
+            'w [g/kg]': '{:,.2f}'.format
+        })
+        print()
+        print(output)
 
-    Q = pd.Series(x[18:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
-    # Q.columns = ['kW']
-    pd.options.display.float_format = '{:,.2f}'.format
-    print()
-    print(Q.to_frame().T / 1000, 'kW')
+        Q = pd.Series(x[18:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
+        # Q.columns = ['kW']
+        pd.options.display.float_format = '{:,.2f}'.format
+        print()
+        print(Q.to_frame().T / 1000, 'kW')
 
-    return None
+        return None
+    else:
+        return x
 
 
 def RecAirVAVmxmaHX(α=1, β=0.1, β_HX=0.1,
-                    θSsp = 30, θIsp = 18, φIsp = 0.49, θO = -1, φO = 1,
-                    Qsa = 0, Qla = 0, mi = 2.18, UA = 935.83, UA_HX = 5000):
-
+                    θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
+                    Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
     Heat Exchanger & Heating & Adiabatic Mixing at second Mixer & Adiabatic humidification & Re-heating
     Recirculated air
@@ -749,49 +752,52 @@ def RecAirVAVmxmaHX(α=1, β=0.1, β_HX=0.1,
     x = ModelRecAirmxmaHX(m, α, β, β_HX, θSsp, θIsp, φIsp,
                           θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
-    θ = np.append(θO, x[0:18:2])
-    w = np.append(wO, x[1:19:2])
+    if not check:
+        θ = np.append(θO, x[0:18:2])
+        w = np.append(wO, x[1:19:2])
 
-    # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
-    # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # XH
-                  [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
-                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # AH
-                  [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],     # MX_AD2
-                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
-                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
-                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
+        # Adjacency matrix
+        # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
+        # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
+        A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],  # XH
+                      [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],  # MX1
+                      [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],  # HC1
+                      [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],  # AH
+                      [+0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],  # MX2
+                      [+0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],  # MX_AD2
+                      [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],  # HC2
+                      [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],  # TZ
+                      [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],  # XC
+                      [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])  # XM
 
-    psy.chartA(θ, w, A)
+        psy.chartA(θ, w, A)
 
-    θ = pd.Series(θ)
-    w = 1000 * pd.Series(w)
-    P = pd.concat([θ, w], axis=1)  # points
-    P.columns = ['θ [°C]', 'w [g/kg]']
+        θ = pd.Series(θ)
+        w = 1000 * pd.Series(w)
+        P = pd.concat([θ, w], axis=1)  # points
+        P.columns = ['θ [°C]', 'w [g/kg]']
 
-    output = P.to_string(formatters={
-        'θ [°C]': '{:,.2f}'.format,
-        'w [g/kg]': '{:,.2f}'.format
-    })
-    print()
-    print(output)
+        output = P.to_string(formatters={
+            'θ [°C]': '{:,.2f}'.format,
+            'w [g/kg]': '{:,.2f}'.format
+        })
+        print()
+        print(output)
 
-    Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
-    # Q.columns = ['kW']
-    pd.options.display.float_format = '{:,.2f}'.format
-    print()
-    print(Q.to_frame().T / 1000, 'kW')
+        Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
+        # Q.columns = ['kW']
+        pd.options.display.float_format = '{:,.2f}'.format
+        print()
+        print(Q.to_frame().T / 1000, 'kW')
 
-    return None
+        return None
+    else:
+        return x
 
 
 def RecAirVAVmamxHX(α=1, β=0.1, β_HX=0.1,
-                    θSsp = 30, θIsp = 18, φIsp = 0.49, θO = -1, φO = 1,
-                    Qsa = 0, Qla = 0, mi = 2.18, UA = 935.83, UA_HX = 5000):
+                    θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
+                    Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
     Heat Exchanger & Heating & Adiabatic Mixing at first Mixer & Adiabatic humidification & Re-heating
     Recirculated air
@@ -882,49 +888,51 @@ def RecAirVAVmamxHX(α=1, β=0.1, β_HX=0.1,
     x = ModelRecAirmamxHX(m, α, β, β_HX, θSsp, θIsp, φIsp,
                           θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
-    θ = np.append(θO, x[0:18:2])
-    w = np.append(wO, x[1:19:2])
+    if not check:
+        θ = np.append(θO, x[0:18:2])
+        w = np.append(wO, x[1:19:2])
 
-    # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
-    # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # XH
-                  [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
-                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # MX_AD1
-                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0],     # AH
-                  [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
-                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
-                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
+        # Adjacency matrix
+        # Points calc.  o   0   1   2   3   4   5   6   7   8   9       Elements
+        # Points plot   0   1   2   3   4   5   6   7   8   9   10      Elements
+        A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0],  # XH
+                      [+0, -1, +1, +0, +0, +0, +0, +0, -1, +0, +0],  # MX1
+                      [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],  # MX_AD1
+                      [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],  # HC1
+                      [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0],  # AH
+                      [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0],  # MX2
+                      [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],  # HC2
+                      [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],  # TZ
+                      [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],  # XC
+                      [+0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])  # XM
 
-    psy.chartA(θ, w, A)
+        psy.chartA(θ, w, A)
 
-    θ = pd.Series(θ)
-    w = 1000 * pd.Series(w)
-    P = pd.concat([θ, w], axis=1)  # points
-    P.columns = ['θ [°C]', 'w [g/kg]']
+        θ = pd.Series(θ)
+        w = 1000 * pd.Series(w)
+        P = pd.concat([θ, w], axis=1)  # points
+        P.columns = ['θ [°C]', 'w [g/kg]']
 
-    output = P.to_string(formatters={
-        'θ [°C]': '{:,.2f}'.format,
-        'w [g/kg]': '{:,.2f}'.format
-    })
-    print()
-    print(output)
+        output = P.to_string(formatters={
+            'θ [°C]': '{:,.2f}'.format,
+            'w [g/kg]': '{:,.2f}'.format
+        })
+        print()
+        print(output)
 
-    Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
-    # Q.columns = ['kW']
-    pd.options.display.float_format = '{:,.2f}'.format
-    print()
-    print(Q.to_frame().T / 1000, 'kW')
+        Q = pd.Series(x[20:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
+        # Q.columns = ['kW']
+        pd.options.display.float_format = '{:,.2f}'.format
+        print()
+        print(Q.to_frame().T / 1000, 'kW')
 
-    return None
-
+        return None
+    else:
+        return x
 
 def RecAirVAVmamaHX(α=1, β=0.1, β_HX=0.1,
-                    θSsp = 30, θIsp = 18, φIsp = 0.49, θO = -1, φO = 1,
-                    Qsa = 0, Qla = 0, mi = 2.18, UA = 935.83, UA_HX = 5000):
+                    θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
+                    Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
     Heat Exchanger & Heating & Adiabatic Mixing at both Mixers & Adiabatic humidification & Re-heating
     Recirculated air
@@ -1016,42 +1024,45 @@ def RecAirVAVmamaHX(α=1, β=0.1, β_HX=0.1,
     x = ModelRecAirmamaHX(m, α, β, β_HX, θSsp, θIsp, φIsp,
                           θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
-    θ = np.append(θO, x[0:20:2])
-    w = np.append(wO, x[1:21:2])
+    if not check:
+        θ = np.append(θO, x[0:20:2])
+        w = np.append(wO, x[1:21:2])
 
-    # Adjacency matrix
-    # Points calc.  o   0   1   2   3   4   5   6   7   8   9   10      Elements
-    # Points plot   0   1   2   3   4   5   6   7   8   9   10  11      Elements
-    A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0],     # XH
-                  [+0, -1, +1, +0, +0, +0, +0, +0, +0, -1, +0, +0],     # MX1
-                  [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0, +0],     # MX_AD1
-                  [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],     # HC1
-                  [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],     # AH
-                  [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],     # MX2
-                  [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],     # MX_AD2
-                  [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],     # HC2
-                  [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],     # TZ
-                  [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],     # XC
-                  [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])    # XM
+        # Adjacency matrix
+        # Points calc.  o   0   1   2   3   4   5   6   7   8   9   10      Elements
+        # Points plot   0   1   2   3   4   5   6   7   8   9   10  11      Elements
+        A = np.array([[-1, +1, +0, +0, +0, +0, +0, +0, +0, +0, +0, +0],  # XH
+                      [+0, -1, +1, +0, +0, +0, +0, +0, +0, -1, +0, +0],  # MX1
+                      [+0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0, +0],  # MX_AD1
+                      [+0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0, +0],  # HC1
+                      [+0, +0, +0, +0, -1, +1, +0, +0, +0, +0, +0, +0],  # AH
+                      [+0, +0, +0, +0, -1, -1, +1, +0, +0, +0, +0, +0],  # MX2
+                      [+0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0, +0],  # MX_AD2
+                      [+0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0, +0],  # HC2
+                      [+0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0, +0],  # TZ
+                      [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, +1, +0],  # XC
+                      [+0, +0, +0, +0, +0, +0, +0, +0, +0, -1, -1, +1]])  # XM
 
-    psy.chartA(θ, w, A)
+        psy.chartA(θ, w, A)
 
-    θ = pd.Series(θ)
-    w = 1000 * pd.Series(w)
-    P = pd.concat([θ, w], axis=1)  # points
-    P.columns = ['θ [°C]', 'w [g/kg]']
+        θ = pd.Series(θ)
+        w = 1000 * pd.Series(w)
+        P = pd.concat([θ, w], axis=1)  # points
+        P.columns = ['θ [°C]', 'w [g/kg]']
 
-    output = P.to_string(formatters={
-        'θ [°C]': '{:,.2f}'.format,
-        'w [g/kg]': '{:,.2f}'.format
-    })
-    print()
-    print(output)
+        output = P.to_string(formatters={
+            'θ [°C]': '{:,.2f}'.format,
+            'w [g/kg]': '{:,.2f}'.format
+        })
+        print()
+        print(output)
 
-    Q = pd.Series(x[22:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
-    # Q.columns = ['kW']
-    pd.options.display.float_format = '{:,.2f}'.format
-    print()
-    print(Q.to_frame().T / 1000, 'kW')
+        Q = pd.Series(x[22:], index=['QsHC1', 'QsHC2', 'QsTZ', 'QlTZ', 'Qx', 'Qs', 'Ql'])
+        # Q.columns = ['kW']
+        pd.options.display.float_format = '{:,.2f}'.format
+        print()
+        print(Q.to_frame().T / 1000, 'kW')
 
-    return None
+        return None
+    else:
+        return x
