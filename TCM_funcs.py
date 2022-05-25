@@ -645,6 +645,6 @@ def DSH(qHVAC, rad_surf_tot, Tisp):
 
     qHVAC_bc_max = max(qHVAC_bc)
 #    T_diff_max = Tisp - -3
-    Qmax = max(qHVAC_red)
+    Qmax = max(qHVAC_red)/1000
 
     return qHVAC_bc_max, Qmax
