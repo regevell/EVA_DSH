@@ -412,7 +412,7 @@ def ModelRecAirmama(m, α, β, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA):
         A[14, 12], A[14, 14], A[14, 18] = m * c, -m * c, 1
         A[15, 13], A[15, 15], A[15, 19] = m * l, -m * l, 1
         # BL
-        A[16, 15], A[16, 18], b[16] = (UA + mi * c), 1, (UA + mi * c) * θO + Qsa
+        A[16, 14], A[16, 18], b[16] = (UA + mi * c), 1, (UA + mi * c) * θO + Qsa
         A[17, 15], A[17, 19], b[17] = mi * l, 1, mi * l * wO + Qla
         # Kθ & Kw
         A[18, 14], A[18, 16], b[18] = Kθ, 1, Kθ * θIsp
