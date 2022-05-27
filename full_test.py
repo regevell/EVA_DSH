@@ -46,7 +46,7 @@ mi = 2.12
 UA = 935.83
 UA_HX = 5000
 #x = ad_hum_HX.ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
-ad_hum_HX.RecAirVAVmamaHX(α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+ad_hum_HXdry.RecAirVAVmamaHXdry(α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 #x = ad_hum_HXdry.ModelRecAirmxmxHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 # def RecHX_wd(m=4, β=0.5, θ3=18, φ3=0.3, θ1=-1, φ1=0.1
 #             ):
