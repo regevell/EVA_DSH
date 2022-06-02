@@ -513,7 +513,7 @@ def ModelRecAirmamaHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla
 
 def RecAirVAVmxmxHXdry(m=3, α=1, β=0.1, β_HX=0.1,
                        θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
-                       Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
+                       Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=False):
     """
     Heat Exchanger dry & Heating & Adiabatic humidification & Re-heating
     Recirculated air

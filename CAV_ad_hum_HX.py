@@ -98,11 +98,12 @@ def ModelRecAirmxmxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     wIsp = psy.w(θIsp, φIsp)  # indoor humidity ratio
 
     # Model
-    θs0, Δ_θs = θS, 2  # initial guess saturation temp.
-
+    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp.
+    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp.
+    
     A = np.zeros((25, 25))  # coefficients of unknowns
     b = np.zeros(25)  # vector of inputs
-    while Δ_θs > 0.01:
+    while Δ_θs0 > 0.01 or Δ_θs1 > 0.01:
         # XH
         A[0, 0], A[0, 22], b[0] = -m * c, 1, -m * c * θO
         A[1, 1], b[1] = 1, wO
@@ -139,12 +140,14 @@ def ModelRecAirmxmxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
         A[21, 13], A[21, 15], A[21, 17] = β_HX, (1 - β_HX), -1
         # Q
         A[22, 0], A[22, 12], A[22, 14], A[22, 23], A[22, 24], b[22] = UA_HX, -UA_HX, -UA_HX, 2, 2, -UA_HX * θO
-        A[23, 14], A[23, 15], b[23] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[23, 14], A[23, 15], b[23] = psy.wsp(θs1), -1, psy.wsp(θs1) * θs1 - psy.w(θs1, 1)
         A[24, 22], A[24, 23], A[24, 24] = 1, -1, -1
 
         x = np.linalg.solve(A, b)
-        Δ_θs = abs(θs0 - x[6])
+        Δ_θs0 = abs(θs0 - x[6])
         θs0 = x[6]
+        Δ_θs1 = abs(θs1 - x[16])
+        θs1 = x[16]
     return x
 
 
@@ -593,8 +596,8 @@ def RecAirVAVmxmxHX(m=3, α=1, β=0.1, β_HX=0.1,
                           θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
     if not check:
-        θ = np.append(θO, x[0:16:2])
-        w = np.append(wO, x[1:17:2])
+        θ = np.append(θO, x[0:17:2])
+        w = np.append(wO, x[1:18:2])
 
         # Adjacency matrix
         # Points calc.  o   0   1   2   3   4   5   6   7   8       Elements
