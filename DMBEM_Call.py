@@ -7,5 +7,5 @@ Inputs:
 Outputs:
     - Maximum building heat loss coefficient, qHVAC_bc_max
 """
-
+import main
 qHVAC_bc_max = main.HLC()
