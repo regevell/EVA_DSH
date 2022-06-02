@@ -9,8 +9,8 @@ from ipywidgets import interact, interactive, fixed, interact_manual
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
 import psychro as psy
-import ad_hum_HX
-import ad_hum_HXdry
+import CAV_ad_hum_HXdry
+import CAV_ad_hum_HX
 # %matplotlib inline  # uncomment for inline figure
 # uncomment for figure in separate window
 # %matplotlib qt
@@ -31,7 +31,7 @@ import ad_hum_HXdry
 #           θSsp = (20,50,2),
 #           θ3sp = (17,25,1), φ3sp = (0,1,0.1),
 #           θ1 = (-10.,17.,2), φ1 = (0,1,0.1));
-m = 4
+m = 3
 α = 0.5
 β = 0.5
 β_HX = 0.5
@@ -46,7 +46,7 @@ mi = 2.12
 UA = 935.83
 UA_HX = 5000
 #x = ad_hum_HX.ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
-ad_hum_HXdry.RecAirVAVmamaHXdry(α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
+CAV_ad_hum_HX.RecAirVAVmxmxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 #x = ad_hum_HXdry.ModelRecAirmxmxHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, mi, UA, UA_HX)
 # def RecHX_wd(m=4, β=0.5, θ3=18, φ3=0.3, θ1=-1, φ1=0.1
 #             ):
