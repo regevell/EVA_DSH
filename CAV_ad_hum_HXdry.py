@@ -511,7 +511,7 @@ def ModelRecAirmamaHXdry(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla
     return x
 
 
-def RecAirVAVmxmxHXdry(α=1, β=0.1, β_HX=0.1,
+def RecAirVAVmxmxHXdry(m=3, α=1, β=0.1, β_HX=0.1,
                        θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                        Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -570,36 +570,9 @@ def RecAirVAVmxmxHXdry(α=1, β=0.1, β_HX=0.1,
         0..8: 2*9 points (temperature, humidity ratio)
         QsHC1, QsHC2, QsTZ, QlTZ, Qx
     """
-    from scipy.optimize import least_squares
-
-    def Saturation(m):
-        """
-        Used in VAV to find the mass flow which solves θS = θSsp
-        Parameters
-        ----------
-            m : mass flow rate of dry air
-
-        Returns
-        -------
-            θS - θSsp: difference between supply temp. and its set point
-
-        """
-        x = ModelRecAirmxmxHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
-                                 θO, φO, Qsa, Qla, mi, UA, UA_HX)
-        θS = x[10]
-        return (θS - θSsp)
-
     plt.close('all')
     wO = psy.w(θO, φO)            # hum. out
 
-    # Mass flow rate
-    res = least_squares(Saturation, 5, bounds=(0, 10))
-    if res.cost < 1e-10:
-        m = float(res.x)
-    else:
-        print('RecAirVAV: No solution for m')
-
-    print(f'm = {m: 5.3f} kg/s')
     x = ModelRecAirmxmxHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
                              θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
@@ -645,7 +618,7 @@ def RecAirVAVmxmxHXdry(α=1, β=0.1, β_HX=0.1,
         return x
 
 
-def RecAirVAVmxmaHXdry(α=1, β=0.1, β_HX=0.1,
+def RecAirVAVmxmaHXdry(m=3, α=1, β=0.1, β_HX=0.1,
                        θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                        Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -704,36 +677,9 @@ def RecAirVAVmxmaHXdry(α=1, β=0.1, β_HX=0.1,
         0..9: 2*10 points (temperature, humidity ratio)
         QsHC1, QsHC2, QsTZ, QlTZ, Qx
     """
-    from scipy.optimize import least_squares
-
-    def Saturation(m):
-        """
-        Used in VAV to find the mass flow which solves θS = θSsp
-        Parameters
-        ----------
-            m : mass flow rate of dry air
-
-        Returns
-        -------
-            θS - θSsp: difference between supply temp. and its set point
-
-        """
-        x = ModelRecAirmxmaHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
-                                 θO, φO, Qsa, Qla, mi, UA, UA_HX)
-        θS = x[12]
-        return (θS - θSsp)
-
     plt.close('all')
     wO = psy.w(θO, φO)            # hum. out
 
-    # Mass flow rate
-    res = least_squares(Saturation, 5, bounds=(0, 10))
-    if res.cost < 1e-10:
-        m = float(res.x)
-    else:
-        print('RecAirVAV: No solution for m')
-
-    print(f'm = {m: 5.3f} kg/s')
     x = ModelRecAirmxmaHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
                              θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
@@ -780,7 +726,7 @@ def RecAirVAVmxmaHXdry(α=1, β=0.1, β_HX=0.1,
         return x
 
 
-def RecAirVAVmamxHXdry(α=1, β=0.1, β_HX=0.1,
+def RecAirVAVmamxHXdry(m=3, α=1, β=0.1, β_HX=0.1,
                        θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                        Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -839,36 +785,9 @@ def RecAirVAVmamxHXdry(α=1, β=0.1, β_HX=0.1,
         0..9: 2*10 points (temperature, humidity ratio)
         QsHC1, QsHC2, QsTZ, QlTZ, Qx
     """
-    from scipy.optimize import least_squares
-
-    def Saturation(m):
-        """
-        Used in VAV to find the mass flow which solves θS = θSsp
-        Parameters
-        ----------
-            m : mass flow rate of dry air
-
-        Returns
-        -------
-            θS - θSsp: difference between supply temp. and its set point
-
-        """
-        x = ModelRecAirmamxHXdry(m, α, β, β_HX,θSsp, θIsp, φIsp,
-                                 θO, φO, Qsa, Qla, mi, UA, UA_HX)
-        θS = x[12]
-        return (θS - θSsp)
-
     plt.close('all')
     wO = psy.w(θO, φO)            # hum. out
 
-    # Mass flow rate
-    res = least_squares(Saturation, 5, bounds=(0, 10))
-    if res.cost < 1e-5:
-        m = float(res.x)
-    else:
-        print('RecAirVAV: No solution for m')
-
-    print(f'm = {m: 5.3f} kg/s')
     x = ModelRecAirmamxHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
                              θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
@@ -915,7 +834,7 @@ def RecAirVAVmamxHXdry(α=1, β=0.1, β_HX=0.1,
         return x
 
 
-def RecAirVAVmamaHXdry(α=1, β=0.1, β_HX=0.1,
+def RecAirVAVmamaHXdry(m=3, α=1, β=0.1, β_HX=0.1,
                        θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                        Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -975,36 +894,9 @@ def RecAirVAVmamaHXdry(α=1, β=0.1, β_HX=0.1,
         0..10: 2*11 points (temperature, humidity ratio)
         QsHC1, QsHC2, QsTZ, QlTZ, Qx
     """
-    from scipy.optimize import least_squares
-
-    def Saturation(m):
-        """
-        Used in VAV to find the mass flow which solves θS = θSsp
-        Parameters
-        ----------
-            m : mass flow rate of dry air
-
-        Returns
-        -------
-            θS - θSsp: difference between supply temp. and its set point
-
-        """
-        x = ModelRecAirmamaHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
-                                 θO, φO, Qsa, Qla, mi, UA, UA_HX)
-        θS = x[14]
-        return (θS - θSsp)
-
     plt.close('all')
     wO = psy.w(θO, φO)            # hum. out
 
-    # Mass flow rate
-    res = least_squares(Saturation, 5, bounds=(0, 10))
-    if res.cost < 1e-10:
-        m = float(res.x)
-    else:
-        print('RecAirVAV: No solution for m')
-
-    print(f'm = {m: 5.3f} kg/s')
     x = ModelRecAirmamaHXdry(m, α, β, β_HX, θSsp, θIsp, φIsp,
                              θO, φO, Qsa, Qla, mi, UA, UA_HX)
 
