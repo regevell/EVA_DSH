@@ -98,8 +98,8 @@ def ModelRecAirmxmxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     wIsp = psy.w(θIsp, φIsp)  # indoor humidity ratio
 
     # Model
-    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp.
-    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp.
+    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp. AH
+    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp. XC
     
     A = np.zeros((25, 25))  # coefficients of unknowns
     b = np.zeros(25)  # vector of inputs
@@ -223,9 +223,9 @@ def ModelRecAirmxmaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     wIsp = psy.w(θIsp, φIsp)  # indoor humidity ratio
 
     # Model
-    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp.
-    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp.
-    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp.
+    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp. AH
+    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp. MX_AD2
+    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp. XC
 
     A = np.zeros((27, 27))  # coefficients of unknowns
     b = np.zeros(27)  # vector of inputs
@@ -353,9 +353,9 @@ def ModelRecAirmamxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     wIsp = psy.w(θIsp, φIsp)  # indoor humidity ratio
 
     # Model
-    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp.
-    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp.
-    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp.
+    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp. AH
+    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp. MX_AD1
+    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp. XC
 
     A = np.zeros((27, 27))  # coefficients of unknowns
     b = np.zeros(27)  # vector of inputs
@@ -368,14 +368,14 @@ def ModelRecAirmamxHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
         A[3, 1], A[3, 3], A[3, 15] = α * m * l, -m * l, (1 - α) * m * l
         # MX_AD1
         A[4, 2], A[4, 3], A[4, 4], A[4, 5] = c, l, -c, -l
-        A[5, 4], A[5, 5], b[5] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[5, 4], A[5, 5], b[5] = psy.wsp(θs1), -1, psy.wsp(θs1) * θs1 - psy.w(θs1, 1)
         # HC1
         A[6, 4], A[6, 6], A[6, 20] = m * c, -m * c, 1
         A[7, 5], A[7, 7] = m * l, -m * l
         # AH
         A[8, 6], A[8, 7], A[8, 8], A[8, 9] = c, l, -c, -l
-        A[9, 8], A[9, 9] = psy.wsp(θs1), -1
-        b[9] = psy.wsp(θs1) * θs1 - psy.w(θs1, 1)
+        A[9, 8], A[9, 9] = psy.wsp(θs0), -1
+        b[9] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
         A[10, 6], A[10, 8], A[10, 10] = β * m * c, (1 - β) * m * c, -m * c
         A[11, 7], A[11, 9], A[11, 11] = β * m * l, (1 - β) * m * l, -m * l
@@ -485,10 +485,10 @@ def ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     wIsp = psy.w(θIsp, φIsp)  # indoor humidity ratio
 
     # Model
-    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp.
-    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp.
-    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp.
-    θs3, Δ_θs3 = θS, 2  # initial guess saturation temp.
+    θs0, Δ_θs0 = θS, 2  # initial guess saturation temp. AH
+    θs1, Δ_θs1 = θS, 2  # initial guess saturation temp. MX_AD1
+    θs2, Δ_θs2 = θS, 2  # initial guess saturation temp. MX_AD2
+    θs3, Δ_θs3 = θS, 2  # initial guess saturation temp. XC
 
     A = np.zeros((29, 29))  # coefficients of unknowns
     b = np.zeros(29)  # vector of inputs
@@ -501,14 +501,14 @@ def ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
         A[3, 1], A[3, 3], A[3, 13] = α * m * l, -m * l, (1 - α) * m * l
         # MX_AD1
         A[4, 2], A[4, 3], A[4, 4], A[4, 5] = c, l, -c, -l
-        A[5, 4], A[5, 5], b[5] = psy.wsp(θs0), -1, psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
+        A[5, 4], A[5, 5], b[5] = psy.wsp(θs1), -1, psy.wsp(θs1) * θs1 - psy.w(θs1, 1)
         # HC1
         A[6, 4], A[6, 6], A[6, 22] = m * c, -m * c, 1
         A[7, 5], A[7, 7] = m * l, -m * l
         # AH
         A[8, 6], A[8, 7], A[8, 8], A[8, 9] = c, l, -c, -l
-        A[9, 8], A[9, 9] = psy.wsp(θs1), -1
-        b[9] = psy.wsp(θs1) * θs1 - psy.w(θs1, 1)
+        A[9, 8], A[9, 9] = psy.wsp(θs0), -1
+        b[9] = psy.wsp(θs0) * θs0 - psy.w(θs0, 1)
         # MX2
         A[10, 6], A[10, 8], A[10, 10] = β * m * c, (1 - β) * m * c, -m * c
         A[11, 7], A[11, 9], A[11, 11] = β * m * l, (1 - β) * m * l, -m * l
@@ -550,7 +550,7 @@ def ModelRecAirmamaHX(m, α, β, β_HX, θS, θIsp, φIsp, θO, φO, Qsa, Qla, m
     return x
 
 
-def RecAirVAVmxmxHX(m=3, α=1, β=0.1, β_HX=0.1,
+def RecAirCAVmxmxHX(m=3, α=1, β=0.1, β_HX=0.1,
                     θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                     Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -658,7 +658,7 @@ def RecAirVAVmxmxHX(m=3, α=1, β=0.1, β_HX=0.1,
         return x
 
 
-def RecAirVAVmxmaHX(m=3, α=1, β=0.1, β_HX=0.1,
+def RecAirCAVmxmaHX(m=3, α=1, β=0.1, β_HX=0.1,
                     θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                     Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -767,7 +767,7 @@ def RecAirVAVmxmaHX(m=3, α=1, β=0.1, β_HX=0.1,
         return x
 
 
-def RecAirVAVmamxHX(m=3, α=1, β=0.1, β_HX=0.1,
+def RecAirCAVmamxHX(m=3, α=1, β=0.1, β_HX=0.1,
                     θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                     Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
@@ -875,7 +875,7 @@ def RecAirVAVmamxHX(m=3, α=1, β=0.1, β_HX=0.1,
     else:
         return x
 
-def RecAirVAVmamaHX(m=3, α=1, β=0.1, β_HX=0.1,
+def RecAirCAVmamaHX(m=3, α=1, β=0.1, β_HX=0.1,
                     θSsp=30, θIsp=18, φIsp=0.49, θO=-1, φO=1,
                     Qsa=0, Qla=0, mi=2.18, UA=935.83, UA_HX=5000, check=True):
     """
